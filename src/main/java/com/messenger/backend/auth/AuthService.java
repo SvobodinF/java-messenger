@@ -27,7 +27,7 @@ public class AuthService {
         }
 
         // Генерация токена
-        String token = jwtService.generateToken(username);
+        String token = jwtService.generateToken(username, user.getId());
 
         // Возвращение AuthResponse с токеном и ID пользователя
         return new AuthResponse(user.getId(), token);

@@ -5,6 +5,7 @@ import com.messenger.backend.friendship.FriendDto;
 import com.messenger.backend.registration.RegistrationRequest;
 import com.messenger.backend.auth.AuthRequest;
 import com.messenger.backend.auth.AuthResponse;
+import org.json.JSONObject;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -13,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Scanner;
+import java.util.*;
 
 @Component
 public class ConsoleApplication implements CommandLineRunner {
@@ -31,47 +32,48 @@ public class ConsoleApplication implements CommandLineRunner {
     public void run(String... args) {
         Scanner scanner = new Scanner(System.in);
         while (true) {
-            if (currentToken == null) {
-                System.out.println("1. Register");
-                System.out.println("2. Login");
-                System.out.println("3. Exit");
-                System.out.print("Choose an option: ");
-                int choice = scanner.nextInt();
-                scanner.nextLine(); // Consume newline
+            try {
+                if (currentToken == null) {
+                    System.out.println("1. Register");
+                    System.out.println("2. Login");
+                    System.out.println("3. Exit");
+                    System.out.print("Choose an option: ");
+                    int choice = scanner.nextInt();
+                    scanner.nextLine(); // Consume newline
 
-                switch (choice) {
-                    case 1 -> register(scanner);
-                    case 2 -> login(scanner);
-                    case 3 -> {
-                        System.out.println("Exiting...");
-                        return;
+                    switch (choice) {
+                        case 1 -> register(scanner);
+                        case 2 -> login(scanner);
+                        default -> System.out.println("Invalid choice, try again.");
                     }
-                    default -> System.out.println("Invalid choice, try again.");
-                }
-            } else {
-                System.out.println("1. View Friends");
-                System.out.println("2. Add Friend");
-                System.out.println("3. View Friend Requests");
-                System.out.println("4. Update Friend Request Status");
-                System.out.println("5. Send Message");
-                System.out.println("6. View Dialogues");
-                System.out.println("7. View Messages With Friend");
-                System.out.println("8. Logout");
-                System.out.print("Choose an option: ");
-                int choice = scanner.nextInt();
-                scanner.nextLine(); // Consume newline
+                } else {
+                    System.out.println("1. View Friends");
+                    System.out.println("2. Add Friend");
+                    System.out.println("3. View Friend Requests");
+                    System.out.println("4. Update Friend Request Status");
+                    System.out.println("5. Send Message");
+                    System.out.println("6. View Dialogues");
+                    System.out.println("7. View Messages With Friend");
+                    System.out.println("8. Logout");
+                    System.out.print("Choose an option: ");
+                    int choice = scanner.nextInt();
+                    scanner.nextLine(); // Consume newline
 
-                switch (choice) {
-                    case 1 -> viewFriends();
-                    case 2 -> addFriendByName(scanner);
-                    case 3 -> viewPendingRequests();
-                    case 4 -> updateRequestStatus(scanner);
-                    case 5 -> sendMessage(scanner);
-                    case 6 -> viewDialogues();
-                    case 7 -> viewMessagesWithFriend(scanner);
-                    case 8 -> logout();
-                    default -> System.out.println("Invalid choice, try again.");
+                    switch (choice) {
+                        case 1 -> viewFriends();
+                        case 2 -> addFriendByName(scanner);
+                        case 3 -> viewPendingRequests();
+                        case 4 -> updateRequestStatus(scanner);
+                        case 5 -> sendMessage(scanner);
+                        case 6 -> viewDialogues();
+                        case 7 -> viewMessagesWithFriend(scanner);
+                        case 8 -> logout();
+                        default -> System.out.println("Invalid choice, try again.");
+                    }
                 }
+            } catch (InputMismatchException e) {
+                System.out.println("Invalid input. Please enter a number.");
+                scanner.nextLine(); // Очистка некорректного ввода
             }
         }
     }
@@ -107,7 +109,7 @@ public class ConsoleApplication implements CommandLineRunner {
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 currentToken = response.getBody().token();
                 currentUserId = extractUserIdFromToken(currentToken);
-                System.out.println("Login successful!");
+                System.out.println("Login successful!" + " " + currentUserId);
             } else {
                 System.out.println("Login failed.");
             }
@@ -117,8 +119,23 @@ public class ConsoleApplication implements CommandLineRunner {
     }
 
     private Long extractUserIdFromToken(String token) {
-        // Extract user ID from the token payload (if encoded as JSON Web Token)
-        return 1L; // Placeholder; implement JWT decoding logic
+        try {
+            // Разделяем токен на части (header.payload.signature)
+            String[] parts = token.split("\\.");
+            if (parts.length < 2) {
+                throw new IllegalArgumentException("Invalid token format");
+            }
+
+            // Декодируем payload из Base64
+            String payload = new String(Base64.getDecoder().decode(parts[1]));
+
+            // Парсим JSON и извлекаем userId
+            JSONObject json = new JSONObject(payload);
+            return json.getLong("userId");
+        } catch (Exception e) {
+            System.out.println("Error decoding token: " + e.getMessage());
+            return null;
+        }
     }
 
     private void logout() {
@@ -143,18 +160,19 @@ public class ConsoleApplication implements CommandLineRunner {
             );
 
             FriendDto[] friends = response.getBody();
-            if (friends != null) {
+            if (friends != null && friends.length > 0) {
                 System.out.println("Your Friends:");
                 for (FriendDto friend : friends) {
                     System.out.println(friend.friendName() + " - " + friend.status());
                 }
             } else {
-                System.out.println("You have no friends.");
+                System.out.println("No friends found.");
             }
         } catch (Exception e) {
             System.out.println("Error retrieving friends: " + e.getMessage());
         }
     }
+
 
     private void addFriendByName(Scanner scanner) {
         System.out.print("Enter friend's name: ");
@@ -196,7 +214,7 @@ public class ConsoleApplication implements CommandLineRunner {
             );
 
             FriendDto[] requests = response.getBody();
-            if (requests != null) {
+            if (requests.length != 0) {
                 System.out.println("Pending Friend Requests:");
                 for (FriendDto request : requests) {
                     System.out.println("ID: " + request.id() + ", Name: " + request.friendName() + ", Status: " + request.status());

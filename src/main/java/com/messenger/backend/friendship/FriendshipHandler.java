@@ -24,6 +24,8 @@ public class FriendshipHandler {
     @GetMapping("/list")
     public ResponseEntity<List<FriendDto>> getFriendsList(@RequestParam Long userId) {
         List<FriendDto> friends = friendshipService.getFriendsList(userId);
+        friends.addAll(getOutgoingRequests(userId));
+
         return ResponseEntity.ok(friends);
     }
 
@@ -32,6 +34,11 @@ public class FriendshipHandler {
     public ResponseEntity<List<FriendDto>> getPendingRequests(@RequestParam Long userId) {
         List<FriendDto> pendingRequests = friendshipService.getPendingRequests(userId);
         return ResponseEntity.ok(pendingRequests);
+    }
+
+    // Получение списка исходящих заявок
+    public List<FriendDto> getOutgoingRequests(Long userId) {
+        return friendshipService.getOutgoingRequests(userId);
     }
 
     // Изменение статуса заявки

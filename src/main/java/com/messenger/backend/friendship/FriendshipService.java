@@ -52,6 +52,11 @@ public class FriendshipService {
         return friendshipRepository.findFriendsWithStatusByUserId(userId);
     }
 
+    // Получение списка исходящих заявок
+    public List<FriendDto> getOutgoingRequests(Long userId) {
+        return friendshipRepository.findOutgoingRequestsByUserId(userId);
+    }
+
     // Получение списка входящих заявок
     public List<FriendDto> getPendingRequests(Long userId) {
         return friendshipRepository.findPendingRequests(userId);
